@@ -16,6 +16,9 @@
  */
 function restoreSessionFromRememberMeCookie($db)
 {
+    if (getenv('HOMELAB_ENABLED') === '1') {
+        return false;
+    }
     if (!isset($_COOKIE['wallos_login'])) {
         return false;
     }

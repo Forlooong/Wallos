@@ -1,4 +1,12 @@
 <?php
+require_once __DIR__ . '/homelab.php';
+if (homelab_enabled()) {
+    $userData = homelab_require_user($db);
+    $userId = (int) $userData['id'];
+    $username = $userData['username'];
+    $main_currency = $userData['main_currency'];
+    return;
+}
 require_once 'remember_me.php';
 
 // Handle OIDC first

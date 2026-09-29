@@ -5,8 +5,8 @@ require_once '../../includes/validate_endpoint.php';
 require_once '../../includes/frankfurter.php';
 
 if (!file_exists('../../images/uploads/logos')) {
-    mkdir('../../images/uploads/logos', 0777, true);
-    mkdir('../../images/uploads/logos/avatars', 0777, true);
+    mkdir('../../images/uploads/logos', 0750, true);
+    mkdir('../../images/uploads/logos/avatars', 0750, true);
 }
 
 function update_exchange_rate($db, $userId)
@@ -24,8 +24,9 @@ function update_exchange_rate($db, $userId)
             $provider = $row['provider'];
 
             $codes = "";
-            $query = "SELECT id, name, symbol, code FROM currencies";
-            $result = $db->query($query);
+            $stmt = $db->prepare('SELECT id, name, symbol, code FROM currencies WHERE user_id = :userId');
+            $stmt->bindValue(':userId', $userId, SQLITE3_INTEGER);
+            $result = $stmt->execute();
             while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                 $codes .= $row['code'] . ",";
             }
@@ -144,11 +145,11 @@ function resizeAndUploadAvatar($uploadedFile, $uploadDir, $name)
     $targetWidth = 80;
     $targetHeight = 80;
 
-    $timestamp = time();
+    $uploadId = bin2hex(random_bytes(16));
     $originalFileName = $uploadedFile['name'];
     $fileExtension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
     $fileExtension = validateFileExtension($fileExtension) ? $fileExtension : 'png';
-    $fileName = $timestamp . '-avatars-' . sanitizeFilename($name) . '.' . $fileExtension;
+    $fileName = $uploadId . '-avatars-' . sanitizeFilename($name) . '.' . $fileExtension;
     $uploadFile = $uploadDir . $fileName;
 
     if (move_uploaded_file($uploadedFile['tmp_name'], $uploadFile)) {
@@ -258,7 +259,23 @@ if (
     }
 
     $avatar = filter_var($_POST['avatar'], FILTER_SANITIZE_URL);
+    require_once __DIR__ . '/../../includes/private_uploads.php';
+    if (empty($_FILES['profile_pic']['name']) && !wallos_avatar_selectable($db, (int) $userId, $avatar)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Avatar does not belong to this account.']);
+        exit();
+    }
     $main_currency = $_POST['main_currency'];
+    $currencyCheck = $db->prepare('SELECT 1 FROM currencies WHERE id = :id AND user_id = :user');
+    $currencyCheck->bindValue(':id', $main_currency, SQLITE3_INTEGER);
+    $currencyCheck->bindValue(':user', $userId, SQLITE3_INTEGER);
+    if (!$currencyCheck->execute()->fetchArray(SQLITE3_NUM)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Currency does not belong to this account.']);
+        exit();
+    }
     $language = $_POST['language'];
 
     if (!empty($_FILES['profile_pic']["name"])) {
@@ -331,10 +348,9 @@ if (
     if ($result) {
         $cookieExpire = time() + (30 * 24 * 60 * 60);
         $oldLanguage = isset($_COOKIE['language']) ? $_COOKIE['language'] : "en";
-        $root = str_replace('/endpoints/user', '', dirname($_SERVER['PHP_SELF']));
-        $root = $root == '' ? '/' : $root;
         setcookie('language', $language, [
-            'path' => $root,
+            'path' => '/apps/wallos/',
+            'secure' => true,
             'expires' => $cookieExpire,
             'samesite' => 'Lax'
         ]);

@@ -7,16 +7,13 @@ require_once '../../includes/validate_endpoint.php';
 require_once '../../includes/ssrf_helper.php';
 
 if (!file_exists('../../images/uploads/logos')) {
-    mkdir('../../images/uploads/logos', 0777, true);
-    mkdir('../../images/uploads/logos/avatars', 0777, true);
+    mkdir('../../images/uploads/logos', 0750, true);
+    mkdir('../../images/uploads/logos/avatars', 0750, true);
 }
 
 function sanitizeFilename($filename)
 {
-    $filename = preg_replace("/[^a-zA-Z0-9\s]/", "", $filename);
-    $filename = str_replace(" ", "-", $filename);
-    $filename = str_replace(".", "", $filename);
-    return $filename;
+    return trim(preg_replace("/[^a-zA-Z0-9]+/", "-", $filename), "-");
 }
 
 function validateFileExtension($fileExtension)
@@ -69,8 +66,8 @@ function getLogoFromUrl($url, $uploadDir, $name, $i18n, $settings)
         }
 
         if ($imageData !== false && $httpCode === 200) {
-            $timestamp = time();
-            $fileName = $timestamp . '-payments-' . sanitizeFilename($name) . '.png';
+            $uploadId = bin2hex(random_bytes(16));
+            $fileName = $uploadId . '-payments-' . sanitizeFilename($name) . '.png';
             $uploadFile = rtrim($uploadDir, '/') . '/' . $fileName;
 
             if (saveLogo($imageData, $uploadFile, $name, $settings)) {
@@ -121,11 +118,11 @@ function resizeAndUploadLogo($uploadedFile, $uploadDir, $name)
     $targetWidth = 70;
     $targetHeight = 48;
 
-    $timestamp = time();
+    $uploadId = bin2hex(random_bytes(16));
     $originalFileName = $uploadedFile['name'];
     $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);
     $fileExtension = validateFileExtension($fileExtension) ? $fileExtension : 'png';
-    $fileName = $timestamp . '-payments-' . sanitizeFilename($name) . '.' . $fileExtension;
+    $fileName = $uploadId . '-payments-' . sanitizeFilename($name) . '.' . $fileExtension;
     $uploadFile = $uploadDir . $fileName;
 
     if (move_uploaded_file($uploadedFile['tmp_name'], $uploadFile)) {

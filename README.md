@@ -1,4 +1,18 @@
 <div align="center">
+
+## Platform integration branch
+
+This branch adapts Wallos v5.8.2 for `/apps/wallos/` with the existing Authelia site
+session, issuer/subject identity binding and private data per account. Both members
+are ordinary users; global administration and independent login/API paths are blocked
+on the server. Private uploads and private browser responses require current ownership
+and are not cached offline. See [SPEC.md](SPEC.md) for implementation and validation.
+
+The proposed production configuration and rollout live in the independent
+`vps-homelab` control repository. This branch does not enable the production Home card
+or connect development tests to formal data. The upstream README below describes the
+general product; deployment must use the platform Contract and immutable candidate.
+
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./images/siteicons/walloswhite.png">
     <source media="(prefers-color-scheme: light)" srcset="./images/siteicons/wallos.png">

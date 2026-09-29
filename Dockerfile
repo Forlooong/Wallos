@@ -1,50 +1,28 @@
-# Use the php:8.3-fpm-alpine base image
-FROM php:8.3-fpm-alpine
-
-# Set working directory to /var/www/html
+# Dependency runtime reused by the focused local validation and final image.
+FROM php:8.3-fpm-alpine@sha256:454b11c8907e32878ce92e87b13c14e1bbe6e1b10f4f96d4a19c9b62ec675d41 AS runtime-base
 WORKDIR /var/www/html
+RUN apk add --no-cache dumb-init shadow sqlite-dev libpng-dev libjpeg-turbo-dev freetype-dev curl icu-dev icu-data-full nginx dcron tzdata libzip-dev sqlite libwebp-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j2 pdo pdo_sqlite calendar gd intl zip
 
-# Update packages and install dependencies
-RUN apk upgrade --no-cache && \
-    apk add --no-cache dumb-init shadow sqlite-dev libpng libpng-dev libjpeg-turbo libjpeg-turbo-dev freetype freetype-dev curl autoconf libgomp icu-dev icu-data-full nginx dcron tzdata libzip-dev sqlite libwebp-dev && \
-    docker-php-ext-install pdo pdo_sqlite calendar && \
-    docker-php-ext-enable pdo pdo_sqlite && \
-    docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp && \
-    docker-php-ext-install -j$(nproc) gd intl zip
+FROM composer:2@sha256:9715c7f69044da2a212a5fbde29ee7da24e364d426560ae6367b060236f847d7 AS composer-bin
+FROM runtime-base AS dependencies
+COPY --from=composer-bin /usr/bin/composer /usr/local/bin/composer
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --classmap-authoritative --no-scripts
 
-# Copy your PHP application files into the container
+FROM runtime-base AS runtime
 COPY . .
-
-# Copy Nginx configuration
+COPY --from=dependencies /var/www/html/vendor ./vendor
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY nginx.default.conf /etc/nginx/http.d/default.conf
-
-# Remove nginx conf files from webroot
-RUN rm -rf /var/www/html/nginx.conf && \
-    rm -rf /var/www/html/nginx.default.conf
-
-# Copy the custom crontab file
-COPY cronjobs /etc/cron.d/cronjobs
-
-# Convert the line endings, allow read access to the cron file, and create cron log folder
-RUN dos2unix /etc/cron.d/cronjobs && \
-    chmod 0644 /etc/cron.d/cronjobs && \
-    /usr/bin/crontab /etc/cron.d/cronjobs && \
-    mkdir /var/log/cron && \
-    chown -R www-data:www-data /var/www/html && \
-    chmod +x /var/www/html/startup.sh && \
-    echo 'pm.max_children = 15' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'pm.max_requests = 500' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    printf 'upload_max_filesize = 256M\npost_max_size = 256M\n' > /usr/local/etc/php/conf.d/wallos-uploads.ini
-
-# Expose port 80 for Nginx
-EXPOSE 80
-
+COPY nginx.default.conf /etc/nginx/http.d/wallos.conf.template
+RUN rm -f /etc/nginx/http.d/default.conf \
+    && dos2unix /var/www/html/startup.sh /var/www/html/cronjobs /etc/nginx/nginx.conf /etc/nginx/http.d/wallos.conf.template \
+    && mkdir -p /var/log/cron /var/run/php /var/lib/nginx /var/lib/php/sessions \
+    && chmod +x startup.sh \
+    && printf '[www]\nlisten = /var/run/php/wallos.sock\nlisten.owner = www-data\nlisten.group = www-data\nlisten.mode = 0660\npm.max_children = 3\npm.start_servers = 1\npm.min_spare_servers = 1\npm.max_spare_servers = 2\npm.max_requests = 300\nclear_env = no\nphp_admin_value[auto_prepend_file] = /var/www/html/includes/homelab_prepend.php\nphp_admin_value[session.save_path] = /var/lib/php/sessions\n' > /usr/local/etc/php-fpm.d/zz-homelab.conf \
+    && printf 'upload_max_filesize=16M\npost_max_size=20M\nexpose_php=Off\ndisplay_errors=Off\nlog_errors=On\nsession.use_strict_mode=1\n' > /usr/local/etc/php/conf.d/homelab.ini
+ENV HOMELAB_ENABLED=1 WALLOS_BIND=127.0.0.1 WALLOS_PORT=18081 PUID=1001 PGID=1001 TZ=Asia/Shanghai
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 CMD curl -fsS "http://127.0.0.1:${WALLOS_PORT}/apps/wallos/health.php" >/dev/null || exit 1
 ENTRYPOINT ["dumb-init", "--"]
-
-# Requires docker engine 25+ for the --start-interval flag
-HEALTHCHECK --interval=2m --timeout=2s --start-period=20s --start-interval=5s --retries=3 \
-    CMD ["curl", "-fsS", "http://127.0.0.1/health.php"]
-
-# Start both PHP-FPM, Nginx
 CMD ["/var/www/html/startup.sh"]

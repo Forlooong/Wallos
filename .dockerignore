@@ -11,3 +11,12 @@
 
 # README screenshots and capture script; not used at runtime
 /screenshots/
+/tests/
+/test-results/
+/.tmp/
+/dev/
+/vendor/
+/db/*
+!/db/wallos.empty.db
+/images/uploads/logos/*
+!/images/uploads/logos/wallos.png

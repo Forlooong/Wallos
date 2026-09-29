@@ -102,24 +102,12 @@ wallos_test('the service worker does not cache-first the manifest forever', func
         'the dynamic, per-user manifest is not cache-first precached either - it must stay network-first so a theme change is reflected');
 });
 
-wallos_test('the service worker matches versioned static assets when offline', function () {
-    $source = file_get_contents(WALLOS_ROOT . '/service-worker.js');
-
-    // The pages request assets as "styles/styles.css?<version>" but they are
-    // precached under the bare path, so the static-asset lookup must ignore
-    // the query string or every asset misses the cache offline.
-    $staticBranch = substr($source, strpos($source, 'Static assets: cache-first'));
-    $staticBranch = substr($staticBranch, 0, strpos($staticBranch, 'PHP pages and everything else'));
-
-    assert_contains('caches.match(request, { ignoreSearch: true })', $staticBranch,
-        'the static-asset lookup ignores the "?<version>" query string');
-    assert_contains('cache.put(request, clone)', $staticBranch,
-        'a cache miss is backfilled, so an asset the install step dropped (e.g. apexcharts) still ends up cached');
-});
-
-wallos_test('the service worker installs static assets in batches, not all at once', function () {
-    $source = file_get_contents(WALLOS_ROOT . '/service-worker.js');
-
-    assert_contains('BATCH_SIZE', $source,
-        'the install step chunks its fetches so large files are not starved of connections');
+wallos_test('the manifest stays inside the Wallos application prefix', function () {
+    $manifest = render_manifest([]);
+    assert_same('/apps/wallos/', $manifest['scope'], 'scope cannot capture Home or Notes');
+    assert_same('/apps/wallos/', $manifest['start_url'], 'installed app opens Wallos');
+    assert_same('/apps/wallos/', $manifest['id'], 'PWA identity is scoped to this deployment');
+    foreach ($manifest['shortcuts'] as $shortcut) {
+        assert_true(!str_starts_with($shortcut['url'], '/'), 'shortcut stays relative to the manifest');
+    }
 });

@@ -17,7 +17,7 @@ function toggleAuthTheme() {
 
   const expirationDate = new Date();
   expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-  document.cookie = 'theme=' + next + '; expires=' + expirationDate.toUTCString() + '; SameSite=Lax';
+  document.cookie = 'theme=' + next + '; expires=' + expirationDate.toUTCString() + '; Path=/apps/wallos/; Secure; SameSite=Lax';
 
   const themeColorMetaTag = document.querySelector('meta[name="theme-color"]');
   if (themeColorMetaTag) {

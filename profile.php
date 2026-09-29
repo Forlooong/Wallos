@@ -94,6 +94,7 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                             <input type="email" id="email" name="email" autocomplete="email"
                                 value="<?= htmlspecialchars($userData['email']) ?>" required>
                         </div>
+                        <?php if (!homelab_enabled()): ?>
                         <div class="form-group">
                             <label for="password"><?= translate('password', $i18n) ?>:</label>
                             <input type="password" id="password" name="password" autocomplete="new-password"
@@ -104,6 +105,7 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
                             <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password"
                                 <?= $demoMode ? 'disabled title="Not available on Demo Mode"' : '' ?>>
                         </div>
+                        <?php endif; ?>
                         <?php
                         $currencies = array();
                         $query = "SELECT * FROM currencies WHERE user_id = :userId";
@@ -163,7 +165,7 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
     $row = $result->fetchArray(SQLITE3_ASSOC);
     $loginDisabled = $row['login_disabled'];
 
-    $showTotpSection = true;
+    $showTotpSection = !homelab_enabled();
     if ($loginDisabled && !$userData['totp_enabled']) {
         $showTotpSection = false;
     }
@@ -263,6 +265,7 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
 
     ?>
 
+    <?php if (!homelab_enabled()): ?>
     <section class="account-section">
         <header>
             <h2><?= translate('api_key', $i18n) ?></h2>
@@ -280,6 +283,7 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
         </div>
     </section>
 
+    <?php endif; ?>
     <section class="account-section">
         <header>
             <h2><?= translate('account', $i18n) ?></h2>
@@ -297,7 +301,7 @@ while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
         </div>
         <div>
             <?php
-            if ($userId != 1 && !$demoMode) {
+            if ($userId != 1 && !$demoMode && !homelab_enabled()) {
                 ?>
                 <h3><?= translate('danger_zone', $i18n) ?></h3>
                 <div class="form-group-inline">

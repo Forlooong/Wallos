@@ -207,6 +207,7 @@ $upcomingPaymentsLimit = normalize_upcoming_payments_limit($settings['upcoming_p
     </section>
 
     <?php
+    if (!homelab_enabled()) {
     // Notification settings
     $sql = "SELECT * FROM notification_settings WHERE user_id = :userId LIMIT 1";
     $stmt = $db->prepare($sql);
@@ -993,6 +994,7 @@ $upcomingPaymentsLimit = normalize_upcoming_payments_limit($settings['upcoming_p
     </section>
 
     <?php
+    }
     $sql = "SELECT * FROM categories WHERE user_id = :userId ORDER BY `order` ASC";
     $stmt = $db->prepare($sql);
     $stmt->bindValue(':userId', $userId, SQLITE3_INTEGER);
@@ -1017,7 +1019,7 @@ $upcomingPaymentsLimit = normalize_upcoming_payments_limit($settings['upcoming_p
         $aiSettings = $row;
     }
 
-    $canTranslateCategories = !empty($aiSettings['enabled']) && !empty($aiSettings['model']) && $lang != 'en';
+    $canTranslateCategories = !homelab_enabled() && !empty($aiSettings['enabled']) && !empty($aiSettings['model']) && $lang != 'en';
     ?>
 
     <section class="account-section">
@@ -1342,6 +1344,7 @@ $upcomingPaymentsLimit = normalize_upcoming_payments_limit($settings['upcoming_p
         </div>
     </section>
 
+    <?php if (!homelab_enabled()): ?>
     <section class="account-section">
         <header>
             <h2><?= translate('ai_recommendations', $i18n) ?></h2>
@@ -1426,6 +1429,7 @@ $upcomingPaymentsLimit = normalize_upcoming_payments_limit($settings['upcoming_p
     </section>
 
     <?php
+    endif;
     $sql = "SELECT * FROM payment_methods WHERE user_id = :userId ORDER BY `order` ASC";
     $stmt = $db->prepare($sql);
     $stmt->bindValue(':userId', $userId, SQLITE3_INTEGER);
@@ -1777,15 +1781,19 @@ $upcomingPaymentsLimit = normalize_upcoming_payments_limit($settings['upcoming_p
     </section>
 
 </section>
+<?php if (!homelab_enabled()): ?>
 <script>
     // The raw applicationServerKey bytes pushManager.subscribe() needs -
     // not a secret, the same value every push service and the VAPID
     // Authorization header's "k=" parameter are handed too.
     window.vapidPublicKey = "<?= htmlspecialchars($vapidPublicKey, ENT_QUOTES, 'UTF-8') ?>";
 </script>
+<?php endif; ?>
 <script src="scripts/settings.js?<?= $version ?>"></script>
 <script src="scripts/theme.js?<?= $version ?>"></script>
+<?php if (!homelab_enabled()): ?>
 <script src="scripts/notifications.js?<?= $version ?>"></script>
+<?php endif; ?>
 
 <?php
 require_once 'includes/footer.php';

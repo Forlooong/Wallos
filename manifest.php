@@ -47,8 +47,8 @@ $manifest = [
             'purpose' => 'maskable',
         ],
     ],
-    'start_url' => '/',
-    'id' => 'com.wallos.app',
+    'start_url' => '/apps/wallos/',
+    'id' => '/apps/wallos/',
     'shortcuts' => [
         [
             'name' => 'Dashboard',
@@ -120,7 +120,7 @@ $manifest = [
     ],
     'background_color' => $themeColor,
     'display' => 'standalone',
-    'scope' => '/',
+    'scope' => '/apps/wallos/',
     'theme_color' => $themeColor,
     'description' => 'Wallos is a personal subscription tracker that helps you keep track of your subscriptions and save money.',
     'orientation' => 'portrait-primary',
@@ -129,6 +129,7 @@ $manifest = [
 
 if (!headers_sent()) {
     header('Content-Type: application/manifest+json; charset=utf-8');
+    header('Cache-Control: private, no-store');
 }
 echo json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 

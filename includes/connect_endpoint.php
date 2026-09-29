@@ -11,6 +11,12 @@ if (!$db) {
 require_once 'i18n/languages.php';
 require_once 'i18n/getlang.php';
 require_once 'i18n/' . $lang . '.php';
+require_once __DIR__ . '/homelab.php';
+if (homelab_enabled()) {
+    $userData = homelab_require_user($db);
+    $userId = (int) $userData['id'];
+    return;
+}
 require_once 'remember_me.php';
 
 $secondsInMonth = 30 * 24 * 60 * 60;

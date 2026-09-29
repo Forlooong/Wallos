@@ -1,0 +1,14 @@
+{
+    "name": "forlooong/wallos",
+    "description": "Wallos platform integration",
+    "require": {
+        "php": "^8.3",
+        "ext-curl": "*",
+        "ext-sqlite3": "*",
+        "jumbojett/openid-connect-php": "1.0.2"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": false
+    }
+}

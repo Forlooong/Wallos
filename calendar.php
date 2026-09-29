@@ -145,6 +145,7 @@ if ($weekStartsSunday) {
         ?>
       </div>
     </div>
+    <?php if (!homelab_enabled()): ?>
     <button class="button secondary-button export-ical" onClick="showExportPopup()"
       title="<?= translate('export_icalendar', $i18n) ?>" aria-label="<?= translate('export_icalendar', $i18n) ?>">
       <?php require_once 'images/siteicons/svg/export_ical.php'; ?>
@@ -160,6 +161,7 @@ if ($weekStartsSunday) {
             <button onclick="copyToClipboard()" class="button tiny"> <?= translate('copy_to_clipboard', $i18n) ?> </button>
         </div>
     </div>
+    <?php endif; ?>
   </div>
   <div>
     <?php

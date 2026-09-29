@@ -47,6 +47,8 @@ if (isset($themeValue)) {
   $cookieExpire = time() + (30 * 24 * 60 * 60);
   setcookie('theme', $themeValue, [
     'expires' => $cookieExpire,
+    'path' => '/apps/wallos/',
+    'secure' => true,
     'samesite' => 'Lax'
   ]);
 }
@@ -113,6 +115,7 @@ $mobileNavigation = $settings['mobile_nav'] ? "mobile-navigation" : "";
     window.csrfToken = "<?= htmlspecialchars(generate_csrf_token()) ?>";
   </script>
   <style>
+    .homelab-home { color: var(--main-color); text-decoration: none; font-size: 14px; white-space: nowrap; margin-inline-end: 18px; }
     <?= htmlspecialchars($customCss, ENT_QUOTES, 'UTF-8') ?>
   </style>
   <?php
@@ -152,19 +155,12 @@ $mobileNavigation = $settings['mobile_nav'] ? "mobile-navigation" : "";
   <script type="text/javascript" src="scripts/i18n/<?= $lang ?>.js?<?= $version ?>"></script>
   <script type="text/javascript" src="scripts/i18n/getlang.js?<?= $version ?>"></script>
   <script type="text/javascript" src="scripts/password-toggle.js?<?= $version ?>"></script>
-  <script>
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      if (!sessionStorage.getItem('sw_prefetched')) {
-        navigator.serviceWorker.controller.postMessage({ type: 'PREFETCH_PAGES' });
-        sessionStorage.setItem('sw_prefetched', '1');
-      }
-    }
-  </script>
 </head>
 
 <body class="<?= $theme ?> <?= $languages[$lang]['dir'] ?> <?= $mobileNavigation ?>">
   <header>
     <div class="contain">
+      <a href="/" class="homelab-home" aria-label="返回网站首页">← 首页</a>
       <div class="logo">
         <a href=".">
           <div class="logo-image" title="Wallos - Subscription Tracker">

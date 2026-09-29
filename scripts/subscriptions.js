@@ -605,7 +605,7 @@ function setSubscriptionsView(view) {
 
   const expirationDate = new Date();
   expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-  document.cookie = "subscriptionsView=" + view + "; expires=" + expirationDate.toUTCString() + "; SameSite=Lax";
+  document.cookie = "subscriptionsView=" + view + "; expires=" + expirationDate.toUTCString() + "; Path=/apps/wallos/; Secure; SameSite=Lax";
 }
 
 function setSortOption(sortOption) {
@@ -622,7 +622,7 @@ function setSortOption(sortOption) {
   const expirationDate = new Date();
   expirationDate.setDate(expirationDate.getDate() + daysToExpire);
   const cookieValue = encodeURIComponent(sortOption) + '; expires=' + expirationDate.toUTCString();
-  document.cookie = 'sortOrder=' + cookieValue + '; SameSite=Lax';
+  document.cookie = 'sortOrder=' + cookieValue + '; Path=/apps/wallos/; Secure; SameSite=Lax';
   fetchSubscriptions(null, null, "sort");
   toggleSortOptions();
 }
@@ -1112,7 +1112,7 @@ function swipeHintAnimation() {
   }, 600);
 
   count++;
-  document.cookie = `${cookieName}=${count}; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/; SameSite=Lax`;
+  document.cookie = `${cookieName}=${count}; expires=Fri, 31 Dec 9999 23:59:59 GMT; Path=/apps/wallos/; Secure; SameSite=Lax`;
 }
 
 function toggleOneTimeCycleUI(isOneTime) {

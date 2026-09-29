@@ -93,7 +93,7 @@ function showSuccessMessage(message) {
 document.addEventListener('DOMContentLoaded', function () {
 
   const userLocale = navigator.language || navigator.languages[0];
-  document.cookie = `user_locale=${userLocale}; expires=Fri, 31 Dec 9999 23:59:59 GMT; SameSite=Lax`;
+  document.cookie = `user_locale=${userLocale}; expires=Fri, 31 Dec 9999 23:59:59 GMT; Path=/apps/wallos/; Secure; SameSite=Lax`;
 
   if (window.update_theme_settings) {
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const existingClasses = document.body.className.split(' ').filter(cls => cls !== 'dark' && cls !== 'light');
     document.body.className = [...existingClasses, themePreference].join(' ');
 
-    document.cookie = `inUseTheme=${themePreference}; expires=Fri, 31 Dec 9999 23:59:59 GMT; SameSite=Lax`;
+    document.cookie = `inUseTheme=${themePreference}; expires=Fri, 31 Dec 9999 23:59:59 GMT; Path=/apps/wallos/; Secure; SameSite=Lax`;
     const themeColorMetaTag = document.querySelector('meta[name="theme-color"]');
     themeColorMetaTag.setAttribute('content', themePreference === 'dark' ? '#12151C' : '#FFFFFF');
   }

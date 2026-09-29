@@ -9,16 +9,13 @@ require_once '../../includes/logo_theme_variant.php';
 require_once '../../includes/logo_cleanup.php';
 
 if (!file_exists('../../images/uploads/logos')) {
-    mkdir('../../images/uploads/logos', 0777, true);
-    mkdir('../../images/uploads/logos/avatars', 0777, true);
+    mkdir('../../images/uploads/logos', 0750, true);
+    mkdir('../../images/uploads/logos/avatars', 0750, true);
 }
 
 function sanitizeFilename($filename)
 {
-    $filename = preg_replace("/[^a-zA-Z0-9\s]/", "", $filename);
-    $filename = str_replace(" ", "-", $filename);
-    $filename = str_replace(".", "", $filename);
-    return $filename;
+    return trim(preg_replace("/[^a-zA-Z0-9]+/", "-", $filename), "-");
 }
 
 function validateFileExtension($fileExtension)
@@ -71,8 +68,8 @@ function getLogoFromUrl($url, $uploadDir, $name, $settings, $i18n)
         }
 
         if ($imageData !== false && $httpCode === 200) {
-            $timestamp = time();
-            $fileName = $timestamp . '-' . sanitizeFilename($name) . '.png';
+            $uploadId = bin2hex(random_bytes(16));
+            $fileName = $uploadId . '-' . sanitizeFilename($name) . '.png';
             $uploadFile = $uploadDir . $fileName; // Note: Use the provided $uploadDir variable
 
             if (saveLogo($imageData, $uploadFile, $name, $settings)) {
@@ -148,11 +145,11 @@ function resizeAndUploadLogo($uploadedFile, $uploadDir, $name, $settings)
     $targetWidth = 135;
     $targetHeight = 42;
 
-    $timestamp = time();
+    $uploadId = bin2hex(random_bytes(16));
     $originalFileName = $uploadedFile['name'];
     $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);
     $fileExtension = validateFileExtension($fileExtension) ? $fileExtension : 'png';
-    $fileName = $timestamp . '-' . sanitizeFilename($name) . '.' . $fileExtension;
+    $fileName = $uploadId . '-' . sanitizeFilename($name) . '.' . $fileExtension;
     $uploadFile = $uploadDir . $fileName;
 
     if (move_uploaded_file($uploadedFile['tmp_name'], $uploadFile)) {
@@ -275,9 +272,20 @@ if ($replacementSubscriptionId !== null) {
 // and easily enumerable).
 function rejectForeignId($message)
 {
+    http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode(['status' => 'Error', 'message' => $message]);
     exit();
+}
+
+// Validate the edit target before downloading or creating any upload.
+if ($isEdit) {
+    $editCheck = $db->prepare('SELECT 1 FROM subscriptions WHERE id = :id AND user_id = :user');
+    $editCheck->bindValue(':id', $_POST['id'] ?? 0, SQLITE3_INTEGER);
+    $editCheck->bindValue(':user', $userId, SQLITE3_INTEGER);
+    if (!$editCheck->execute()->fetchArray(SQLITE3_NUM)) {
+        rejectForeignId('The specified subscription does not belong to you.');
+    }
 }
 
 $currStmt = $db->prepare("SELECT id FROM currencies WHERE id = :id AND user_id = :userId");

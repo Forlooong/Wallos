@@ -1,92 +1,54 @@
 #!/bin/sh
-
-set -euo pipefail
-
-echo "Startup script is running..." > /var/log/startup.log
-
-# Default the PUID and PGID environment variables to 82, otherwise
-# set to the user defined ones.
-PUID=${PUID:-82}
-PGID=${PGID:-82}
-
-# Change the www-data user id and group id to be the user-specified ones
+set -eu
+PUID=${PUID:-1001}
+PGID=${PGID:-1001}
+WALLOS_BIND=${WALLOS_BIND:-127.0.0.1}
+WALLOS_PORT=${WALLOS_PORT:-18081}
+case "$PUID:$PGID:$WALLOS_PORT" in *[!0-9:]*|'') echo "Invalid numeric runtime setting" >&2; exit 1;; esac
+case "$WALLOS_BIND" in 127.0.0.1|0.0.0.0) ;; *) echo "Invalid bind address" >&2; exit 1;; esac
+[ "$WALLOS_PORT" -gt 1024 ] && [ "$WALLOS_PORT" -lt 65536 ]
+[ "${HOMELAB_ENABLED:-}" = 1 ] || { echo "Platform mode is required" >&2; exit 1; }
+# A missing bind directory must fail before initialization, never create a fallback.
+[ -d /var/www/html/db ] && [ -d /var/www/html/images/uploads/logos ]
+rm -f /tmp/wallos-ready
 groupmod -o -g "$PGID" www-data
 usermod -o -u "$PUID" www-data
-chown -R www-data:www-data /var/www/html
-chown -R www-data:www-data /tmp
-chmod -R 770 /tmp
-
-# PIDs we’ll track
+mkdir -p /var/www/html/images/uploads/logos/avatars /var/lib/php/sessions /var/run/php
+chown -R "$PUID:$PGID" /var/www/html/db /var/www/html/images/uploads/logos /var/lib/php/sessions
+chmod 0750 /var/www/html/db /var/www/html/images/uploads/logos /var/lib/php/sessions
+umask 027
+# No web listener exists until schema and platform bootstrap have succeeded.
+php /var/www/html/endpoints/cronjobs/createdatabase.php >/dev/null
+php /var/www/html/endpoints/db/migrate.php >/dev/null
+php /var/www/html/includes/homelab_bootstrap.php
+rm -f /var/www/html/db/setup_token.db
+chown -R "$PUID:$PGID" /var/www/html/db
+find /var/www/html/db -type f -exec chmod 0640 {} +
+sed -e "s/__BIND__/$WALLOS_BIND/g" -e "s/__PORT__/$WALLOS_PORT/g" /etc/nginx/http.d/wallos.conf.template > /etc/nginx/http.d/wallos.conf
+nginx -t
+# Only requested local subscription/annual-statistics maintenance; no email/reset/push agents.
+crontab -u www-data /var/www/html/cronjobs
 PHP_FPM_PID=
 NGINX_PID=
 CROND_PID=
-shutdown_in_progress=0
-
-shutdown_once() {
-  exit_signal=$?
-  kill_signal=$(kill -l "$exit_signal" 2>/dev/null || echo "$exit_signal")
-
-  [ "$shutdown_in_progress" -eq 1 ] && return 0
-  shutdown_in_progress=1
-
-  echo "Got signal: $kill_signal - Shutting down gracefully... "
-  # nginx wants QUIT for graceful
-  nginx -s quit || true
-  # php-fpm graceful quit as well
-  [ -n "${PHP_FPM_PID}" ] && kill -QUIT "${PHP_FPM_PID}" 2>/dev/null || true
-  # cron can just get TERM
-  [ -n "${CROND_PID}" ] && kill -TERM "${CROND_PID}" 2>/dev/null || true
-  echo "Graceful shutdown complete."
+stop() {
+    trap - TERM INT
+    rm -f /tmp/wallos-ready
+    [ -z "$NGINX_PID" ] || kill -QUIT "$NGINX_PID" 2>/dev/null || true
+    [ -z "$PHP_FPM_PID" ] || kill -QUIT "$PHP_FPM_PID" 2>/dev/null || true
+    [ -z "$CROND_PID" ] || kill -TERM "$CROND_PID" 2>/dev/null || true
+    wait || true
 }
-
-# Handle all common stop signals
-trap 'shutdown_once' SIGTERM SIGINT SIGQUIT
-
-# Start both PHP-FPM and Nginx
-echo "Launching php-fpm"
+trap stop TERM INT
 php-fpm -F &
 PHP_FPM_PID=$!
-
-echo "Launching crond"
-crond -f &
+crond -f -L /dev/stderr &
 CROND_PID=$!
-
-echo "Launching nginx"
 nginx -g 'daemon off;' &
 NGINX_PID=$!
-
-touch ~/startup.txt
-
-# Wait one second before running scripts
-sleep 1
-
-# Create database if it does not exist
-/usr/local/bin/php /var/www/html/endpoints/cronjobs/createdatabase.php
-
-# Perform any database migrations
-/usr/local/bin/php /var/www/html/endpoints/db/migrate.php
-
-# Change permissions on the database directory
-chmod -R 755 /var/www/html/db/
-chown -R www-data:www-data /var/www/html/db/
-
-mkdir -p /var/www/html/images/uploads/logos/avatars
-
-# Change permissions on the logos directory
-chmod -R 755 /var/www/html/images/uploads/logos
-chown -R www-data:www-data /var/www/html/images/uploads/logos
-
-# Remove crontab for the user
-crontab -d -u root
-
-# Run updatenextpayment.php and wait for it to finish
-/usr/local/bin/php /var/www/html/endpoints/cronjobs/updatenextpayment.php
-
-# Run updateexchange.php
-/usr/local/bin/php /var/www/html/endpoints/cronjobs/updateexchange.php
-
-# Run checkforupdates.php
-/usr/local/bin/php /var/www/html/endpoints/cronjobs/checkforupdates.php
-
-# Essentially wait until all child processes exit
-wait
+touch /tmp/wallos-ready
+chmod 0644 /tmp/wallos-ready
+# Exit the whole App if any supervised process fails; systemd owns restart.
+wait -n "$PHP_FPM_PID" "$NGINX_PID" "$CROND_PID" || true
+stop
+exit 1
