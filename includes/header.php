@@ -115,7 +115,36 @@ $mobileNavigation = $settings['mobile_nav'] ? "mobile-navigation" : "";
     window.csrfToken = "<?= htmlspecialchars(generate_csrf_token()) ?>";
   </script>
   <style>
-    .homelab-home { color: var(--main-color); text-decoration: none; font-size: 14px; white-space: nowrap; margin-inline-end: 18px; }
+    body > main { padding-bottom: calc(108px + env(safe-area-inset-bottom)); }
+    .app-return-home {
+      position: fixed;
+      right: max(20px, env(safe-area-inset-right));
+      bottom: max(24px, env(safe-area-inset-bottom));
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-sizing: border-box;
+      min-height: 46px;
+      padding: 10px 20px;
+      border: 1px solid rgba(112, 139, 128, .55);
+      border-radius: 999px;
+      background: var(--box-background-color);
+      color: var(--text-color);
+      font-size: 14px;
+      line-height: 22px;
+      white-space: nowrap;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(var(--text-color-rgb), .08);
+    }
+    .app-return-home svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .app-return-home:hover { background: var(--surface-hover); }
+    .app-return-home:focus-visible { outline: 2px solid var(--main-color); outline-offset: 3px; }
+    @media (max-width: 768px) {
+      .mobile-navigation .app-return-home { bottom: max(94px, calc(70px + env(safe-area-inset-bottom))); }
+    }
+    @media print { .app-return-home { display: none !important; } }
     <?= htmlspecialchars($customCss, ENT_QUOTES, 'UTF-8') ?>
   </style>
   <?php
@@ -158,9 +187,14 @@ $mobileNavigation = $settings['mobile_nav'] ? "mobile-navigation" : "";
 </head>
 
 <body class="<?= $theme ?> <?= $languages[$lang]['dir'] ?> <?= $mobileNavigation ?>">
+  <a href="/" class="app-return-home" aria-label="返回网站首页">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9" />
+    </svg>
+    <span>返回首页</span>
+  </a>
   <header>
     <div class="contain">
-      <a href="/" class="homelab-home" aria-label="返回网站首页">← 首页</a>
       <div class="logo">
         <a href=".">
           <div class="logo-image" title="Wallos - Subscription Tracker">
