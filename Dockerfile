@@ -11,8 +11,15 @@ COPY --from=composer-bin /usr/bin/composer /usr/local/bin/composer
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --prefer-dist --no-progress --no-interaction --classmap-authoritative --no-scripts
 
-FROM runtime-base AS runtime
+FROM runtime-base AS application-source
 COPY . .
+# Streamed git-archive contexts do not apply the client-side .dockerignore.
+# Keep development files out of the final runtime for either context form.
+RUN rm -rf .github tests test-results screenshots dev .tmp \
+    && rm -f *.md .dockerignore .gitignore .gitattributes Dockerfile
+
+FROM runtime-base AS runtime
+COPY --from=application-source /var/www/html /var/www/html
 COPY --from=dependencies /var/www/html/vendor ./vendor
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY nginx.default.conf /etc/nginx/http.d/wallos.conf.template
